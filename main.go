@@ -6,9 +6,19 @@ import(
 	"strings"
 	"strconv"
 	"math"
+	"encoding/json"
 )
 
 type(
+
+	SubNet struct {
+		SubnetNumber int `json:"subnet_number"`
+		SubnetAddress [4]int `json:"subnet2_number"`
+		Broadcast [4]int `json:"subnet3_number"`
+		StartAddress [4]int `json:"subnet4_number"`
+		EndAddress [4]int `json:"subnet6_number"`
+	}
+
 	NetworkAddress struct {
 		IPAddress [4]int
 		Address string
@@ -89,95 +99,64 @@ func (blabla *NetworkAddress) maxAddress() {
 	}
 }
 
-func (blabla *NetworkAddress) hostsAddress() {
+func (blabla *NetworkAddress) hostsAddress() (subNets []SubNet) {
 	blabla.minAddress()
 	minad := blabla.IPAddress
 	minad2 := blabla.IPAddress
 	for i :=1; i <= blabla.subNet(); i++ {
+		var subnet SubNet
 		switch blabla.countOctets() {
 		case 1:
 			minad[3] += int(blabla.hosts())
-			minad3 := minad
-			minad3[3] -= 1
-			fmt.Println("")
-			fmt.Println("Подсеть номер:", i)
-			fmt.Println("Подсеть -", minad2)
-			fmt.Println("Broadcast -", minad3)
-			minad2[3] += 1
-			minad3[3] -= 1
-			fmt.Println(minad2, "-", minad3)
-			minad2 = minad
+			blabla.sub_Net(&minad, &minad2, i, &subnet)
 		case 2:
 			koren := int(blabla.hosts()) / int(blabla.subNet())
 			result := math.Sqrt(float64(koren))
 			minad[2] = minad[2] + int(result)
-			minad3 := minad
-			minad3[2] -= 1
-			minad3[3] = 255
-			fmt.Println("")
-			fmt.Println("Подсеть номер:", i)
-			fmt.Println("Подсеть -", minad2)
-			fmt.Println("Broadcast -", minad3)
-			minad2[3] += 1
-			minad3[3] -= 1
-			fmt.Println(minad2, "-", minad3)
-			minad2 = minad
+			blabla.sub_Net(&minad, &minad2, i, &subnet)
 		case 3:
 			koren := int(blabla.hosts()) / int(blabla.subNet())
 			result := math.Sqrt(float64(koren)) / math.Sqrt(float64(256))
 			minad[1] = minad[1] + int(result)
-			minad3 := minad
-			minad3[1] -= 1
-			minad3[2] = 255
-			minad3[3] = 255
-			fmt.Println("")
-			fmt.Println("Подсеть номер:", i)
-			fmt.Println("Подсеть -", minad2)
-			fmt.Println("Broadcast -", minad3)
-			minad2[3] += 1
-			minad3[3] -= 1
-			fmt.Println(minad2, "-", minad3)
-			minad2 = minad
+			blabla.sub_Net(&minad, &minad2, i, &subnet)
 		case 4:
 			koren := int(blabla.hosts()) / int(blabla.subNet())
 			result := math.Sqrt(float64(koren)) / math.Sqrt(float64(256))
 			result = result / math.Sqrt(float64(256))
-			fmt.Println(result)
 			minad[0] = minad[0] + int(result)
-			minad3 := minad
-			minad3[0] -= 1
-			minad3[1] = 255
-			minad3[2] = 255
-			minad3[3] = 255
-			fmt.Println("")
-			fmt.Println("Подсеть номер:", i)
-			fmt.Println("Подсеть -", minad2)
-			fmt.Println("Broadcast -", minad3)
-			minad2[3] += 1
-			minad3[3] -= 1
-			fmt.Println(minad2, "-", minad3)
-			minad2 = minad
+			blabla.sub_Net(&minad, &minad2, i, &subnet)
 		}
+
+	subNets = append(subNets, subnet)
+
 	}
+
+	return
 }
 
-/*func (blabla *NetworkAddress) checksPlus() {
-	for i :=1; i <= blabla.subNet(); i++ {
-		if blabla.countOctets() > 1 {
-			koren := blabla.hosts() / blabla.subNet()
-			result := 
-		}
-	}*/
-/*	for i, v := range blabla.IPAddress {
-		if v == 256 {
-		v = 0
-		blabla.IPAddress[i] = 0
-		blabla.IPAddress[i - 1] = blabla.IPAddress[i - 1] + 1
-		fmt.Println(blabla.IPAddress[i])
-		}
-	}*/
+func (blabla *NetworkAddress) sub_Net(minad, minad2 *[4]int, i int, subnet *SubNet) {
+	minad3 := *minad
+	minad3[4 - blabla.countOctets()] -= 1
 
-/*}*/
+	for k := 1; k < blabla.countOctets() ; k++ {
+
+		minad3[4 - k] = 255
+	}
+
+	fmt.Println("")
+	fmt.Println("Подсеть номер:", i)
+	subnet.SubnetNumber = i
+	fmt.Println("Подсеть -", minad2)
+	subnet.SubnetAddress = *minad2
+	fmt.Println("Broadcast -", minad3)
+	subnet.Broadcast = minad3
+	minad2[3] += 1
+	minad3[3] -= 1
+	fmt.Println(minad2, "-", minad3)
+	subnet.StartAddress = *minad2
+	subnet.EndAddress = minad3
+	*minad2 = *minad	
+}
 
 func main() {
 	inputAddress := flag.String("addr", "59.124.163.151/27", "Network address")
@@ -190,19 +169,16 @@ func main() {
 	fmt.Println("Кол-во подсетей", netAddr.subNet())
 	fmt.Println("Кол-во хостов в подсети", netAddr.hosts())
 	fmt.Println("Кол-во последних изменяемых октетов:", netAddr.countOctets())
-
-/*	result := 0
-
-	for i:= 0; i < netAddr.subNet(); i++ {
-		result = result + int(netAddr.hosts()) 
-	fmt.Println(result)
-	}*/
 	netAddr.minAddress()
 	fmt.Println("Минимальный адрес хоста", netAddr.IPAddress)
 	netAddr.maxAddress()
 	fmt.Println("Максимальный адрес хоста", netAddr.IPAddress)
-	netAddr.hostsAddress()
-	
+	subnets := netAddr.hostsAddress()
+	b, err := json.Marshal(subnets)
+	if err != nil {
+		panic("Json Error")
+	}
+	fmt.Println(string(b))
 }
 
 func ConvertInt(val string, base, toBase int) (string, error) {
