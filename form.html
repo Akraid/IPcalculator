@@ -1,0 +1,40 @@
+<script>
+
+        function btnClick()
+        {
+            var Txt1 = "";
+            var Txt2 = "";
+            Txt1 = document.getElementById("ipaddr").value;
+            Txt2 = document.getElementById("mask").value;
+        	fetch(`/calc?ipaddr=${Txt1}&netmask=${Txt2}`)
+        		.then(response=>response.json())
+        		.then(response=>{
+        			for (var i = 0; i < response.length; i++) {
+        				console.log(response[i]);
+        				document.getElementById("table").innerHTML += "<tr><td>" + JSON.stringify(response[i].subnet_number) + "</td><td>"+JSON.stringify(response[i].subnet_address)+"</td><td>" + JSON.stringify(response[i].broadcast) + "</td><td>"+JSON.stringify(response[i].start_address)+"</td><td>" + JSON.stringify(response[i].end_address) + "</td></tr>";
+        			}
+        		});
+
+        }
+
+</script>
+<h1>Calculator</h1>
+<form>
+    <label>IP Address:</label><br />
+    <input type="text" name="ipaddr" value="192.168.0.1" id="ipaddr"><br />
+    <label>Mask:</label><br />
+    <input type="text" name="netmask" value="27" id="mask"><br />
+</form>
+<button onClick="btnClick();">Клик</button>
+ 
+<table align = "center" id="table" border="1">
+	<tr>
+		<td>Subnet Number</td>
+		<td>Subnet Address</td>
+		<td>Broadcast</td>
+		<td>Start_Address</td>
+		<td>End_Address</td>
+	</tr>
+</table>
+
+

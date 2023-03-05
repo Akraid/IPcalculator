@@ -7,16 +7,19 @@ import(
 	"strconv"
 	"math"
 	"encoding/json"
+    "net/http"
+    "log"
+    "html/template"
 )
 
 type(
 
 	SubNet struct {
 		SubnetNumber int `json:"subnet_number"`
-		SubnetAddress [4]int `json:"subnet2_number"`
-		Broadcast [4]int `json:"subnet3_number"`
-		StartAddress [4]int `json:"subnet4_number"`
-		EndAddress [4]int `json:"subnet6_number"`
+		SubnetAddress [4]int `json:"subnet_address"`
+		Broadcast [4]int `json:"broadcast"`
+		StartAddress [4]int `json:"start_address"`
+		EndAddress [4]int `json:"end_address"`
 	}
 
 	NetworkAddress struct {
@@ -61,6 +64,7 @@ func (networkAddress *NetworkAddress) subNet() (subNet int) {
 
 func parseAddress(address string) (output *NetworkAddress) {
 	s := strings.Split(address, "/")
+
 	netMask, err := strconv.Atoi(s[1])
 	if err != nil {
 		panic("Wrong netMask")
@@ -143,42 +147,66 @@ func (blabla *NetworkAddress) sub_Net(minad, minad2 *[4]int, i int, subnet *SubN
 		minad3[4 - k] = 255
 	}
 
-	fmt.Println("")
-	fmt.Println("Подсеть номер:", i)
 	subnet.SubnetNumber = i
-	fmt.Println("Подсеть -", minad2)
 	subnet.SubnetAddress = *minad2
-	fmt.Println("Broadcast -", minad3)
 	subnet.Broadcast = minad3
 	minad2[3] += 1
 	minad3[3] -= 1
-	fmt.Println(minad2, "-", minad3)
 	subnet.StartAddress = *minad2
 	subnet.EndAddress = minad3
 	*minad2 = *minad	
 }
 
-func main() {
-	inputAddress := flag.String("addr", "59.124.163.151/27", "Network address")
-	flag.Parse()
-	netAddr := parseAddress(*inputAddress)
-	fmt.Println(netAddr.Address, netAddr.Netmask)
-	netMaskBinary := netAddr.netMaskBinary()
-	fmt.Println("Маска в формате двоичных чисел :", netMaskBinary)
-	netAddr.netMaskDecimal(netMaskBinary)
-	fmt.Println("Кол-во подсетей", netAddr.subNet())
-	fmt.Println("Кол-во хостов в подсети", netAddr.hosts())
-	fmt.Println("Кол-во последних изменяемых октетов:", netAddr.countOctets())
-	netAddr.minAddress()
-	fmt.Println("Минимальный адрес хоста", netAddr.IPAddress)
-	netAddr.maxAddress()
-	fmt.Println("Максимальный адрес хоста", netAddr.IPAddress)
+func ip_mask(w http.ResponseWriter, req *http.Request) {
+
+	ipAddr := req.URL.Query().Get("ipaddr")
+	netMask := req.URL.Query().Get("netmask")
+	ipAddr = ipAddr + "/" + netMask
+
+	netAddr := parseAddress(ipAddr)
+
 	subnets := netAddr.hostsAddress()
 	b, err := json.Marshal(subnets)
 	if err != nil {
-		panic("Json Error")
+		log.Fatal("Json Error")
 	}
-	fmt.Println(string(b))
+
+	fmt.Fprintf(w, string(b))
+}
+
+func form(w http.ResponseWriter, req *http.Request) {
+
+	tmpl := template.Must(template.ParseFiles("form.html"))
+
+    tmpl.Execute(w, nil)
+}
+
+func main() {
+	inputAddress := flag.String("addr", "59.124.163.151/27", "Network address")
+	serverMode := flag.Bool("server", false, "Server mode")
+	flag.Parse()
+	if *serverMode {
+
+		http.HandleFunc("/", form)
+	    http.HandleFunc("/calc", ip_mask)
+
+		log.Println("Starting server port:8090")
+		log.Fatal(http.ListenAndServe(":8090", nil))
+
+	} else {
+		netAddr := parseAddress(*inputAddress)
+		fmt.Println(netAddr.Address, netAddr.Netmask)
+		netMaskBinary := netAddr.netMaskBinary()
+		fmt.Println("Маска в формате двоичных чисел :", netMaskBinary)
+		netAddr.netMaskDecimal(netMaskBinary)
+		fmt.Println("Кол-во подсетей", netAddr.subNet())
+		fmt.Println("Кол-во хостов в подсети", netAddr.hosts())
+		fmt.Println("Кол-во последних изменяемых октетов:", netAddr.countOctets())
+		netAddr.minAddress()
+		fmt.Println("Минимальный адрес хоста", netAddr.IPAddress)
+		netAddr.maxAddress()
+		fmt.Println("Максимальный адрес хоста", netAddr.IPAddress)
+	}
 }
 
 func ConvertInt(val string, base, toBase int) (string, error) {
